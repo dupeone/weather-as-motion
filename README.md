@@ -4,6 +4,11 @@ An interactive 3D visualization that transforms real-time weather data across th
 
 This project maps 64 U.S. cities onto a geographic grid. Each rod represents one city and responds to live weather conditions, turning atmospheric data into a kinetic visual system.
 
+## Demo
+
+https://dupeone.github.io/weather-as-motion/
+
+
 ## How it works
 
 - **Height** reflects temperature
