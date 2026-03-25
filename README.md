@@ -2,6 +2,7 @@
 
 ![Weather as Motion](assets/WeatherMotionScreenshot.jpg)
 
+
 ![Demo](assets/WeatherMotionGif.gif)
 
 A living map of weather.
