@@ -1,1 +1,388 @@
-#
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Weather Sculpture - USA 64</title>
+<style>
+  body {
+    margin: 0;
+    background: #111;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+  }
+
+  canvas {
+    display: block;
+  }
+
+  #infoPanel {
+    position: absolute;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    min-width: 300px;
+    max-width: 560px;
+    padding: 12px 18px;
+    background: rgba(0, 0, 0, 0.84);
+    color: #fff;
+    border-radius: 10px;
+    line-height: 1.5;
+    font-size: 13px;
+    z-index: 20;
+    display: none;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+    text-align: center;
+  }
+
+  #infoPanel .city {
+    font-weight: bold;
+    margin-bottom: 4px;
+    font-size: 14px;
+  }
+
+  #intro {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 760px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.72);
+    color: #000;
+    border-radius: 10px;
+    font-size: 16px;
+    line-height: 1.45;
+    text-align: center;
+    z-index: 20;
+  }
+</style>
+</head>
+<body>
+
+<div id="intro">
+
+  This visualization transforms real-time weather across the United States into motion, color, and form.
+  Each rod represents a city positioned geographically from west to east and north to south.
+  Height and color reflect temperature, rotation reflects wind speed, and the top glow indicates precipitation.<br/><br/>
+  <strong>Hover over any rod to view city details.</strong>
+</div>
+
+<div id="infoPanel"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
+<script>
+// Scene
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111111);
+
+// Camera
+const camera = new THREE.PerspectiveCamera(
+  45,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000
+);
+camera.position.set(22, 30, 38);
+camera.lookAt(0, 0, 0);
+
+// Renderer
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// Lights
+scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+dirLight.position.set(20, 40, 20);
+scene.add(dirLight);
+
+// Info panel
+const infoPanel = document.getElementById("infoPanel");
+
+function showInfo(data) {
+  if (!data) {
+    infoPanel.style.display = "none";
+    return;
+  }
+
+  const lines = [
+    `<div class="city">${data.city}</div>`,
+    `<div>Temp: ${data.tempC.toFixed(1)}°C / ${data.tempF.toFixed(1)}°F</div>`,
+    `<div>Wind: ${data.windKmh.toFixed(1)} km/h ${data.windDir}</div>`
+  ];
+
+  if (data.precipMm > 0) {
+    const precipText = data.precipType
+      ? `${data.precipMm.toFixed(2)} mm (${data.precipType})`
+      : `${data.precipMm.toFixed(2)} mm`;
+    lines.push(`<div>Precip: ${precipText}</div>`);
+  }
+
+  infoPanel.innerHTML = lines.join("");
+  infoPanel.style.display = "block";
+}
+
+// Grid
+const gridSize = 8;
+const cellSize = 2;
+const spacing = 1.2;
+const pitch = cellSize + spacing;
+const totalSpan = (gridSize - 1) * pitch;
+const baseHeight = 4;
+
+const rods = [];
+const hitboxes = [];
+
+// Materials
+const baseSideColor = new THREE.Color(0x3399ff);
+const hoverColor = new THREE.Color(0xffa500);
+
+// Raycaster
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let hasMouseMoved = false;
+
+window.addEventListener("mousemove", (e) => {
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  hasMouseMoved = true;
+});
+
+window.addEventListener("mouseleave", () => {
+  hasMouseMoved = false;
+  infoPanel.style.display = "none";
+  rods.forEach(r => r.userData.hover = false);
+});
+
+// 64 U.S. cities
+const citySlots = [
+  { name:"Seattle",lat:47.61,lon:-122.33},{name:"Spokane",lat:47.66,lon:-117.43},{name:"Missoula",lat:46.87,lon:-113.99},{name:"Billings",lat:45.78,lon:-108.50},{name:"Bismarck",lat:46.81,lon:-100.78},{name:"Duluth",lat:46.79,lon:-92.10},{name:"Burlington",lat:44.48,lon:-73.21},{name:"Portland ME",lat:43.66,lon:-70.25},
+
+  {name:"Portland",lat:45.52,lon:-122.68},{name:"Boise",lat:43.61,lon:-116.20},{name:"Salt Lake City",lat:40.76,lon:-111.89},{name:"Cheyenne",lat:41.14,lon:-104.82},{name:"Sioux Falls",lat:43.55,lon:-96.73},{name:"Minneapolis",lat:44.98,lon:-93.27},{name:"Buffalo",lat:42.89,lon:-78.87},{name:"Boston",lat:42.36,lon:-71.06},
+
+  {name:"Eugene",lat:44.05,lon:-123.09},{name:"Reno",lat:39.53,lon:-119.81},{name:"Denver",lat:39.74,lon:-104.99},{name:"Omaha",lat:41.26,lon:-95.94},{name:"Chicago",lat:41.88,lon:-87.63},{name:"Detroit",lat:42.33,lon:-83.05},{name:"Albany",lat:42.65,lon:-73.75},{name:"New York City",lat:40.71,lon:-74.01},
+
+  {name:"Sacramento",lat:38.58,lon:-121.49},{name:"San Francisco",lat:37.77,lon:-122.42},{name:"Las Vegas",lat:36.17,lon:-115.14},{name:"Albuquerque",lat:35.08,lon:-106.65},{name:"Kansas City",lat:39.10,lon:-94.58},{name:"St. Louis",lat:38.63,lon:-90.20},{name:"Washington DC",lat:38.90,lon:-77.04},{name:"Philadelphia",lat:39.95,lon:-75.17},
+
+  {name:"San Jose",lat:37.34,lon:-121.89},{name:"Los Angeles",lat:34.05,lon:-118.24},{name:"Phoenix",lat:33.45,lon:-112.07},{name:"Amarillo",lat:35.22,lon:-101.83},{name:"Wichita",lat:37.69,lon:-97.34},{name:"Louisville",lat:38.25,lon:-85.76},{name:"Richmond",lat:37.54,lon:-77.44},{name:"Charlotte",lat:35.23,lon:-80.84},
+
+  {name:"San Diego",lat:32.72,lon:-117.16},{name:"Tucson",lat:32.22,lon:-110.97},{name:"El Paso",lat:31.76,lon:-106.49},{name:"Lubbock",lat:33.58,lon:-101.85},{name:"Dallas",lat:32.78,lon:-96.80},{name:"Nashville",lat:36.16,lon:-86.78},{name:"Atlanta",lat:33.75,lon:-84.39},{name:"Charleston",lat:32.78,lon:-79.93},
+
+  {name:"Yuma",lat:32.69,lon:-114.62},{name:"Las Cruces",lat:32.32,lon:-106.76},{name:"San Antonio",lat:29.42,lon:-98.49},{name:"Austin",lat:30.27,lon:-97.74},{name:"Houston",lat:29.76,lon:-95.37},{name:"Birmingham",lat:33.52,lon:-86.81},{name:"Savannah",lat:32.08,lon:-81.09},{name:"Jacksonville",lat:30.33,lon:-81.66},
+
+  {name:"Palm Springs",lat:33.83,lon:-116.55},{name:"Imperial",lat:32.85,lon:-115.57},{name:"Corpus Christi",lat:27.80,lon:-97.40},{name:"Brownsville",lat:25.90,lon:-97.50},{name:"New Orleans",lat:29.95,lon:-90.07},{name:"Tallahassee",lat:30.44,lon:-84.28},{name:"Tampa",lat:27.95,lon:-82.46},{name:"Miami",lat:25.76,lon:-80.19}
+];
+
+// Helpers
+function getTempColor(tempF) {
+  const cold = new THREE.Color(0x3A7BFF);
+  const mid = new THREE.Color(0xFFD84D);
+  const hot = new THREE.Color(0xFF6A00);
+
+  if (tempF <= 40) return cold.clone();
+  if (tempF >= 70) return hot.clone();
+
+  if (tempF <= 55) {
+    return new THREE.Color().lerpColors(cold, mid, (tempF - 40) / 15);
+  }
+  return new THREE.Color().lerpColors(mid, hot, (tempF - 55) / 15);
+}
+
+function degreesToCompass(deg) {
+  const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  return dirs[Math.round(deg / 22.5) % 16];
+}
+
+function getPrecipType(code) {
+  if (code == null || code === 0) return null;
+  if ([51,53,55].includes(code)) return "Drizzle";
+  if ([56,57].includes(code)) return "Freezing Drizzle";
+  if ([61,63,65].includes(code)) return "Rain";
+  if ([66,67].includes(code)) return "Freezing Rain";
+  if ([71,73,75].includes(code)) return "Snow";
+  if ([77].includes(code)) return "Snow Grains";
+  if ([80,81,82].includes(code)) return "Rain Showers";
+  if ([85,86].includes(code)) return "Snow Showers";
+  if ([95].includes(code)) return "Thunderstorm";
+  if ([96,99].includes(code)) return "Thunderstorm with Hail";
+  return "Precipitation";
+}
+
+// Create rods + corrected hitboxes
+citySlots.forEach((city, i) => {
+  const row = Math.floor(i / gridSize);
+  const col = i % gridSize;
+
+  const rodGeometry = new THREE.BoxGeometry(cellSize, baseHeight, cellSize);
+  const rodMaterials = [
+    new THREE.MeshStandardMaterial({ color: baseSideColor.clone(), metalness: 0.5, roughness: 0.3 }),
+    new THREE.MeshStandardMaterial({ color: baseSideColor.clone(), metalness: 0.5, roughness: 0.3 }),
+    new THREE.MeshStandardMaterial({ color: baseSideColor.clone(), metalness: 0.5, roughness: 0.3 }),
+    new THREE.MeshStandardMaterial({ color: baseSideColor.clone(), metalness: 0.5, roughness: 0.3 }),
+    new THREE.MeshStandardMaterial({ color: baseSideColor.clone(), metalness: 0.5, roughness: 0.3 }),
+    new THREE.MeshStandardMaterial({ color: baseSideColor.clone(), metalness: 0.5, roughness: 0.3 })
+  ];
+
+  const rod = new THREE.Mesh(rodGeometry, rodMaterials);
+  rod.position.x = col * pitch - totalSpan / 2;
+  rod.position.z = row * pitch - totalSpan / 2;
+  rod.position.y = baseHeight / 2;
+  rod.userData = {
+    city,
+    hover: false,
+    flashIntensity: 0,
+    rodIndex: i
+  };
+
+  const edges = new THREE.EdgesGeometry(rodGeometry);
+  const line = new THREE.LineSegments(
+    edges,
+    new THREE.LineBasicMaterial({ color: 0x000000 })
+  );
+  rod.add(line);
+
+  scene.add(rod);
+  rods.push(rod);
+
+  const hitboxGeometry = new THREE.BoxGeometry(
+    cellSize * 0.94,
+    baseHeight * 0.98,
+    cellSize * 0.94
+  );
+
+  const hitboxMaterial = new THREE.MeshBasicMaterial({
+    transparent: true,
+    opacity: 0,
+    depthWrite: false
+  });
+
+  const hitbox = new THREE.Mesh(hitboxGeometry, hitboxMaterial);
+  hitbox.position.copy(rod.position);
+  hitbox.userData = { rodIndex: i };
+  scene.add(hitbox);
+  hitboxes.push(hitbox);
+});
+
+// Weather
+let weatherData = new Array(citySlots.length).fill(null);
+
+async function updateWeather() {
+  try {
+    const results = await Promise.all(
+      citySlots.map(c => {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m,precipitation,weather_code`;
+        return fetch(url).then(r => r.json());
+      })
+    );
+
+    weatherData = results.map((r, i) => {
+      const cur = r.current || {};
+      const tempC = cur.temperature_2m ?? 0;
+
+      return {
+        city: citySlots[i].name,
+        tempC,
+        tempF: tempC * 9 / 5 + 32,
+        windKmh: cur.wind_speed_10m ?? 0,
+        windDir: degreesToCompass(cur.wind_direction_10m ?? 0),
+        precipMm: cur.precipitation ?? 0,
+        precipType: getPrecipType(cur.weather_code)
+      };
+    });
+  } catch (err) {
+    console.error("Weather fetch failed:", err);
+  }
+}
+
+updateWeather();
+setInterval(updateWeather, 300000);
+
+// Animate
+function animate(time) {
+  requestAnimationFrame(animate);
+
+  rods.forEach((rod, i) => {
+    const d = weatherData[i];
+    if (!d) return;
+
+    const tempNorm = THREE.MathUtils.clamp((d.tempF - 20) / 70, 0, 1);
+    const heightScale = 1 + tempNorm * 0.8;
+
+    rod.scale.y = heightScale;
+    rod.position.y = (baseHeight * heightScale) / 2;
+
+    // hitbox now centered exactly on rod so tops trigger
+    hitboxes[i].scale.y = heightScale * 0.98;
+    hitboxes[i].position.x = rod.position.x;
+    hitboxes[i].position.z = rod.position.z;
+    hitboxes[i].position.y = rod.position.y;
+
+    const sideColor = getTempColor(d.tempF);
+
+    [0,1,4,5].forEach(faceIndex => {
+      rod.material[faceIndex].color.copy(rod.userData.hover ? hoverColor : sideColor);
+      rod.material[faceIndex].emissive.copy(sideColor.clone().multiplyScalar(0.18));
+    });
+
+    rod.material[3].color.copy(sideColor);
+    rod.material[3].emissive.copy(sideColor.clone().multiplyScalar(0.08));
+
+    if (d.precipMm > 0) {
+      // Smooth pulsing intensity (0 → 1)
+      const pulse = (Math.sin(time * 0.008) + 1) * 0.5;
+
+      // Stronger pulse based on amount
+      const strength = 0.4 + Math.min(d.precipMm / 5, 1) * 0.6;
+
+      const intensity = pulse * strength;
+
+      const purple = new THREE.Color(0x9900ff);
+
+      // PURE purple — no mixing with temp color
+      rod.material[2].color.copy(purple);
+
+      // emissive pulse (this is what creates glow)
+      rod.material[2].emissive.copy(purple.clone().multiplyScalar(intensity * 1.5));
+
+    } else {
+      // No precip → clean, same as rod
+      rod.material[2].color.copy(sideColor);
+      rod.material[2].emissive.copy(sideColor.clone().multiplyScalar(0.08));
+    }
+
+    rod.rotation.y += d.windKmh * 0.0015;
+  });
+
+  rods.forEach(r => r.userData.hover = false);
+
+  if (hasMouseMoved) {
+    raycaster.setFromCamera(mouse, camera);
+    const hits = raycaster.intersectObjects(hitboxes, false);
+
+    if (hits.length > 0) {
+      const rodIndex = hits[0].object.userData.rodIndex;
+      const rod = rods[rodIndex];
+      rod.userData.hover = true;
+      showInfo(weatherData[rodIndex]);
+    } else {
+      infoPanel.style.display = "none";
+    }
+  } else {
+    infoPanel.style.display = "none";
+  }
+
+  renderer.render(scene, camera);
+}
+
+animate(0);
+
+// Resize
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
