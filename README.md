@@ -39,12 +39,4 @@ python -m http.server 8000
 Then open:
 
 http://localhost:8000
-GitHub Pages
 
-This project is designed to be published with GitHub Pages.
-
-Future ideas
-Use wind direction to tilt rods
-Refine the U.S. layout silhouette
-Add a background map layer
-Explore a physical kinetic sculpture version
