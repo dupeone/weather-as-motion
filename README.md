@@ -1,47 +1,65 @@
 # Weather as Motion
 
-An interactive 3D visualization that transforms real-time weather data across the United States into motion, color, and form.
+![Weather as Motion](assets/WeatherMotionScreenshot.jpg)
 
-This project maps 64 U.S. cities onto a geographic grid. Each rod represents one city and responds to live weather conditions, turning atmospheric data into a kinetic visual system.
+![Demo](assets/WeatherMotionGif.gif)
 
-## Demo
+A living map of weather.
+
+This project transforms real-time atmospheric data across the United States into motion, color, and form. Instead of charts or dashboards, weather is experienced as a dynamic, spatial system.
+
+## The idea
+
+Each vertical rod represents a U.S. city, positioned geographically from west to east and north to south. As conditions change, the sculpture continuously reshapes itself.
+
+- **Temperature** becomes height and color  
+- **Wind** becomes motion  
+- **Precipitation** becomes light  
+
+Patterns emerge across the grid—heat rises, storms pulse, and wind fields rotate—revealing the invisible behavior of the atmosphere.
+
+## Interaction
+
+Hover over any rod to explore:
+- City name  
+- Temperature (°C / °F)  
+- Wind speed and direction  
+- Precipitation type and intensity  
+
+## Why this exists
+
+I wanted to explore how real-time data can become something physical and expressive.
+
+Most data visualizations aim for clarity.  
+This aims for presence.
+
+## Tech
+
+- Three.js  
+- JavaScript  
+- Open-Meteo API  
+
+## Live
 
 https://dupeone.github.io/weather-as-motion/
 
 
-## How it works
+## Run locally
 
-- **Height** reflects temperature
-- **Color** reflects temperature, from cool blue to warm orange
-- **Rotation** reflects wind speed
-- **Top glow** pulses purple when precipitation is present
+Because this uses live API data, run it with a local server.
 
-Hover over a rod to view city-specific weather details.
+### VS Code
 
-## Why I built this
+Use **Live Server** on `index.html`
 
-I wanted to explore how live data could feel sculptural rather than purely informational. Instead of presenting weather as a chart or dashboard, this project turns it into a spatial, animated experience.
-
-## Tech stack
-
-- HTML
-- CSS
-- JavaScript
-- Three.js
-- Open-Meteo API
-
-## Running locally
-
-Because this project uses live API requests, it should be served from a local server rather than opened directly as a `file://` page.
-
-### VS Code Live Server
-Open the folder in VS Code and use **Open with Live Server** on `index.html`.
 
 ### Python
+
 ```bash
 python -m http.server 8000
 
 Then open:
 
 http://localhost:8000
+
 
