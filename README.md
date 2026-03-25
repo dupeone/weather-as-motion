@@ -49,10 +49,6 @@ https://dupeone.github.io/weather-as-motion/
 
 Because this uses live API data, run it with a local server.
 
-### VS Code
-
-Use **Live Server** on `index.html`
-
 
 ### Python
 
@@ -62,5 +58,30 @@ python -m http.server 8000
 Then open:
 
 http://localhost:8000
+```
 
+### VS Code
+
+Use **Live Server** on `index.html`
+
+---
+
+## Live
+
+https://dupeone.github.io/weather-as-motion/
+
+---
+
+## Next Directions
+
+- Use wind direction to tilt rods (not just rotate)
+- Refine geographic spacing to better match the U.S. shape
+- Add subtle camera motion for a more cinematic feel
+- Translate the system into a physical kinetic sculpture
+
+---
+
+## Author
+
+Michael Johnston
 
